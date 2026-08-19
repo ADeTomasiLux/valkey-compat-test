@@ -18,6 +18,7 @@ public final class ValkeyCompatibilityTest {
         String password = required("REDIS_PASSWORD");
         boolean ssl = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_SSL", "true"));
         boolean startTls = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_START_TLS", "true"));
+        boolean keepAlive = Boolean.parseBoolean(System.getenv().getOrDefault("KEEP_ALIVE", "false"));
         String key = "compat-test:" + UUID.randomUUID();
 
         RedisClusterConfiguration redis = new RedisClusterConfiguration(Collections.singletonList(node));
@@ -35,6 +36,7 @@ public final class ValkeyCompatibilityTest {
         LettuceConnectionFactory factory = new LettuceConnectionFactory(redis, client.build());
         factory.afterPropertiesSet();
 
+        int exitCode = 0;
         try {
             byte[] encodedKey = key.getBytes(StandardCharsets.UTF_8);
             byte[] value = "ok".getBytes(StandardCharsets.UTF_8);
@@ -52,10 +54,20 @@ public final class ValkeyCompatibilityTest {
         } catch (Exception exception) {
             System.err.println("INCOMPATIBLE: " + rootCause(exception).getClass().getSimpleName()
                 + ": " + rootCause(exception).getMessage());
-            System.exit(1);
+            exitCode = 1;
         } finally {
             factory.destroy();
         }
+
+        if (keepAlive) {
+            System.out.println("KEEP_ALIVE: waiting for ECS inspection");
+            try {
+                Thread.sleep(Long.MAX_VALUE);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        System.exit(exitCode);
     }
 
     private static String required(String name) {
