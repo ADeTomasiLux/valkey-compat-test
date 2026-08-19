@@ -42,10 +42,15 @@ public final class ValkeyCompatibilityTest {
             byte[] value = "ok".getBytes(StandardCharsets.UTF_8);
             RedisConnection connection = factory.getConnection();
             try {
+                System.out.println("TEST: PING");
                 require("PONG", connection.ping(), "PING");
+                System.out.println("TEST: SET");
                 require(true, connection.stringCommands().set(encodedKey, value), "SET");
+                System.out.println("TEST: GET");
                 require("ok", new String(connection.stringCommands().get(encodedKey), StandardCharsets.UTF_8), "GET");
+                System.out.println("TEST: EXPIRE");
                 require(true, connection.keyCommands().expire(encodedKey, 60), "EXPIRE");
+                System.out.println("TEST: DEL");
                 require(1L, connection.keyCommands().del(encodedKey), "DEL");
             } finally {
                 connection.close();
@@ -54,6 +59,7 @@ public final class ValkeyCompatibilityTest {
         } catch (Exception exception) {
             System.err.println("INCOMPATIBLE: " + rootCause(exception).getClass().getSimpleName()
                 + ": " + rootCause(exception).getMessage());
+            exception.printStackTrace(System.err);
             exitCode = 1;
         } finally {
             factory.destroy();
