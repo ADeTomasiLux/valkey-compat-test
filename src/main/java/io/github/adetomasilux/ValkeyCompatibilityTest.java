@@ -17,6 +17,7 @@ public final class ValkeyCompatibilityTest {
         String node = required("REDIS_NODE");
         String password = required("REDIS_PASSWORD");
         boolean ssl = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_SSL", "true"));
+        boolean startTls = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_START_TLS", "true"));
         String key = "compat-test:" + UUID.randomUUID();
 
         RedisClusterConfiguration redis = new RedisClusterConfiguration(Collections.singletonList(node));
@@ -25,7 +26,10 @@ public final class ValkeyCompatibilityTest {
         LettuceClientConfiguration.LettuceClientConfigurationBuilder client =
             LettuceClientConfiguration.builder().commandTimeout(Duration.ofSeconds(10));
         if (ssl) {
-            client.useSsl().startTls();
+            LettuceClientConfiguration.LettuceSslClientConfigurationBuilder sslClient = client.useSsl();
+            if (startTls) {
+                sslClient.startTls();
+            }
         }
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(redis, client.build());
