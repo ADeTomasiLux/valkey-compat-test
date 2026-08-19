@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.UUID;
 
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -33,12 +34,15 @@ public final class ValkeyCompatibilityTest {
         try {
             byte[] encodedKey = key.getBytes(StandardCharsets.UTF_8);
             byte[] value = "ok".getBytes(StandardCharsets.UTF_8);
-            try (var connection = factory.getConnection()) {
+            RedisConnection connection = factory.getConnection();
+            try {
                 require("PONG", connection.ping(), "PING");
                 require(true, connection.stringCommands().set(encodedKey, value), "SET");
                 require("ok", new String(connection.stringCommands().get(encodedKey), StandardCharsets.UTF_8), "GET");
                 require(true, connection.keyCommands().expire(encodedKey, 60), "EXPIRE");
                 require(1L, connection.keyCommands().del(encodedKey), "DEL");
+            } finally {
+                connection.close();
             }
             System.out.println("COMPATIBLE: PING, SET, GET, EXPIRE, and DEL succeeded");
         } catch (Exception exception) {

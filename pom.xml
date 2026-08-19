@@ -12,6 +12,8 @@
     <maven.compiler.release>11</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring-boot.version>2.2.5.RELEASE</spring-boot.version>
+    <spring-data-redis.version>2.2.5.RELEASE</spring-data-redis.version>
+    <lettuce.version>5.2.2.RELEASE</lettuce.version>
   </properties>
 
   <dependencyManagement>
@@ -30,10 +32,12 @@
     <dependency>
       <groupId>org.springframework.data</groupId>
       <artifactId>spring-data-redis</artifactId>
+      <version>${spring-data-redis.version}</version>
     </dependency>
     <dependency>
       <groupId>io.lettuce</groupId>
       <artifactId>lettuce-core</artifactId>
+      <version>${lettuce.version}</version>
     </dependency>
   </dependencies>
 

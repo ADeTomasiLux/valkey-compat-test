@@ -1,6 +1,6 @@
 # Valkey compatibility test
 
-A one-shot container that reproduces a legacy Spring Data Redis connection using Spring Boot 2.2.5 dependency versions, Redis cluster configuration, password authentication, and Lettuce `useSsl().startTls()`.
+A one-shot container that reproduces a legacy Redis connection using Spring Data Redis 2.2.5, Lettuce 5.2.2, Redis cluster configuration, password authentication, and Lettuce `useSsl().startTls()`.
 
 ## Inputs
 
