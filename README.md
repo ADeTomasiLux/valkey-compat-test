@@ -8,6 +8,7 @@ A one-shot container that tests a legacy Redis client using Spring Data Redis 2.
 - `REDIS_PASSWORD`: password supplied at runtime
 - `REDIS_SSL`: defaults to `true`
 - `REDIS_START_TLS`: defaults to `true` to reproduce the gateway; set to `false` for ElastiCache direct TLS
+- `REDIS_CLUSTER`: defaults to `true`; set to `false` for the gateway standalone branch
 - `KEEP_ALIVE`: defaults to `false`; set to `true` when running as an ECS service
 
 The process runs `PING`, `SET`, `GET`, `EXPIRE`, and `DEL` against a disposable key. It exits `0` on success and `1` on failure. It never prints credentials.

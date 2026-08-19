@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
@@ -18,11 +19,9 @@ public final class ValkeyCompatibilityTest {
         String password = required("REDIS_PASSWORD");
         boolean ssl = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_SSL", "true"));
         boolean startTls = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_START_TLS", "true"));
+        boolean cluster = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_CLUSTER", "true"));
         boolean keepAlive = Boolean.parseBoolean(System.getenv().getOrDefault("KEEP_ALIVE", "false"));
         String key = "compat-test:" + UUID.randomUUID();
-
-        RedisClusterConfiguration redis = new RedisClusterConfiguration(Collections.singletonList(node));
-        redis.setPassword(password);
 
         LettuceClientConfiguration.LettuceClientConfigurationBuilder client =
             LettuceClientConfiguration.builder().commandTimeout(Duration.ofSeconds(10));
@@ -33,7 +32,18 @@ public final class ValkeyCompatibilityTest {
             }
         }
 
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(redis, client.build());
+        LettuceConnectionFactory factory;
+        if (cluster) {
+            RedisClusterConfiguration redis = new RedisClusterConfiguration(Collections.singletonList(node));
+            redis.setPassword(password);
+            factory = new LettuceConnectionFactory(redis, client.build());
+        } else {
+            String[] address = node.split(":", 2);
+            RedisStandaloneConfiguration redis =
+                new RedisStandaloneConfiguration(address[0], Integer.parseInt(address[1]));
+            redis.setPassword(password);
+            factory = new LettuceConnectionFactory(redis, client.build());
+        }
         factory.afterPropertiesSet();
 
         int exitCode = 0;
