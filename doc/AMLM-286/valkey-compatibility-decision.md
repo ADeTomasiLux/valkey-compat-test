@@ -18,7 +18,7 @@ The candidate must work with Java 11, Spring Data Redis 2.2.5, Lettuce 5.2.2, th
 
 | Candidate | Status | Evidence | Decision |
 | --- | --- | --- | --- |
-| Valkey provisioned | Testing | Already deployed in `vto-backend-dev`; gateway-equivalent probe pending | Pending |
+| Valkey provisioned | Testing | Gateway-equivalent STARTTLS probe hangs in `LettuceConnectionFactory.getConnection()` before PING; direct-TLS control pending | Likely incompatible |
 | Valkey Serverless | Not tested | None | Pending |
 | Redis OSS | Not tested | None | Pending |
 | Redis-compatible ECS | Not tested | Fallback only | Pending |

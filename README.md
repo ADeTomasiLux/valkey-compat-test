@@ -7,6 +7,7 @@ A one-shot container that reproduces the cache path used by `vto-video-profile-g
 - `SPRING_REDIS_HOST`: standalone host, matching the gateway setting; port `6379` is inherited from Spring Data
 - `SPRING_REDIS_PASSWORD`: password supplied at runtime
 - `SPRING_REDIS_SSL`: set to `true` to reproduce the deployed gateway's TLS with STARTTLS
+- `SPRING_REDIS_START_TLS`: defaults to `true`; set to `false` only for the direct-TLS diagnostic control
 - `SPRING_REDIS_CLUSTER_NODES`: optional comma-separated `host:port` list; when absent, the gateway standalone branch is used
 - `KEEP_ALIVE`: defaults to `false`; set to `true` when running as an ECS service
 

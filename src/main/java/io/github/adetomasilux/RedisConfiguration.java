@@ -45,7 +45,10 @@ public class RedisConfiguration {
         LettuceClientConfiguration.LettuceClientConfigurationBuilder builder =
             LettuceClientConfiguration.builder();
         if (Boolean.parseBoolean(required("SPRING_REDIS_SSL"))) {
-            builder.useSsl().startTls();
+            LettuceClientConfiguration.LettuceSslClientConfigurationBuilder sslBuilder = builder.useSsl();
+            if (Boolean.parseBoolean(System.getenv().getOrDefault("SPRING_REDIS_START_TLS", "true"))) {
+                sslBuilder.startTls();
+            }
         }
         return builder.build();
     }
