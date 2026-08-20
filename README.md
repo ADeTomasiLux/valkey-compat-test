@@ -1,17 +1,16 @@
 # Valkey compatibility test
 
-A one-shot container that tests a legacy Redis client using Spring Data Redis 2.2.5, Lettuce 5.2.2, Redis cluster configuration, and password authentication.
+A one-shot container that reproduces the cache path used by `vto-video-profile-gateway`: Java 11, Spring Data Redis 2.2.5, Lettuce 5.2.2, its cluster/standalone selection, password authentication, TLS with STARTTLS, and Spring Data repository mapping.
 
 ## Inputs
 
-- `REDIS_NODE`: `host:port`
-- `REDIS_PASSWORD`: password supplied at runtime
-- `REDIS_SSL`: defaults to `true`
-- `REDIS_START_TLS`: defaults to `true` to reproduce the gateway; set to `false` for ElastiCache direct TLS
-- `REDIS_CLUSTER`: defaults to `true`; set to `false` for the gateway standalone branch
+- `SPRING_REDIS_HOST`: standalone host, matching the gateway setting; port `6379` is inherited from Spring Data
+- `SPRING_REDIS_PASSWORD`: password supplied at runtime
+- `SPRING_REDIS_SSL`: set to `true` to reproduce the deployed gateway's TLS with STARTTLS
+- `SPRING_REDIS_CLUSTER_NODES`: optional comma-separated `host:port` list; when absent, the gateway standalone branch is used
 - `KEEP_ALIVE`: defaults to `false`; set to `true` when running as an ECS service
 
-The process runs `PING`, `SET`, `GET`, `EXPIRE`, and `DEL` against a disposable key. It exits `0` on success and `1` on failure. It never prints credentials.
+The process runs `PING`, then saves, reads, deserializes, checks TTL, and deletes a disposable `JwtBlacklist` through the same Spring Data repository model as the gateway. It exits `0` on success and `1` on failure. It never prints credentials.
 
 ## Build
 

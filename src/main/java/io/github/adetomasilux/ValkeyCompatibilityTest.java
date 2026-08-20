@@ -1,78 +1,58 @@
 package io.github.adetomasilux;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.Collections;
+import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisClusterConfiguration;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 public final class ValkeyCompatibilityTest {
     private ValkeyCompatibilityTest() {}
 
     public static void main(String[] args) {
-        String node = required("REDIS_NODE");
-        String password = required("REDIS_PASSWORD");
-        boolean ssl = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_SSL", "true"));
-        boolean startTls = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_START_TLS", "true"));
-        boolean cluster = Boolean.parseBoolean(System.getenv().getOrDefault("REDIS_CLUSTER", "true"));
         boolean keepAlive = Boolean.parseBoolean(System.getenv().getOrDefault("KEEP_ALIVE", "false"));
-        String key = "compat-test:" + UUID.randomUUID();
-
-        LettuceClientConfiguration.LettuceClientConfigurationBuilder client =
-            LettuceClientConfiguration.builder().commandTimeout(Duration.ofSeconds(10));
-        if (ssl) {
-            LettuceClientConfiguration.LettuceSslClientConfigurationBuilder sslClient = client.useSsl();
-            if (startTls) {
-                sslClient.startTls();
-            }
-        }
-
-        LettuceConnectionFactory factory;
-        if (cluster) {
-            RedisClusterConfiguration redis = new RedisClusterConfiguration(Collections.singletonList(node));
-            redis.setPassword(password);
-            factory = new LettuceConnectionFactory(redis, client.build());
-        } else {
-            String[] address = node.split(":", 2);
-            RedisStandaloneConfiguration redis =
-                new RedisStandaloneConfiguration(address[0], Integer.parseInt(address[1]));
-            redis.setPassword(password);
-            factory = new LettuceConnectionFactory(redis, client.build());
-        }
-        factory.afterPropertiesSet();
+        String jwt = "compat-test-" + UUID.randomUUID();
 
         int exitCode = 0;
-        try {
-            byte[] encodedKey = key.getBytes(StandardCharsets.UTF_8);
-            byte[] value = "ok".getBytes(StandardCharsets.UTF_8);
+        try (AnnotationConfigApplicationContext context =
+                 new AnnotationConfigApplicationContext(RedisConfiguration.class)) {
+            LettuceConnectionFactory factory = context.getBean(LettuceConnectionFactory.class);
+            JwtBlacklistRepository repository = context.getBean(JwtBlacklistRepository.class);
+
             RedisConnection connection = factory.getConnection();
             try {
                 System.out.println("TEST: PING");
                 require("PONG", connection.ping(), "PING");
-                System.out.println("TEST: SET");
-                require(true, connection.stringCommands().set(encodedKey, value), "SET");
-                System.out.println("TEST: GET");
-                require("ok", new String(connection.stringCommands().get(encodedKey), StandardCharsets.UTF_8), "GET");
-                System.out.println("TEST: EXPIRE");
-                require(true, connection.keyCommands().expire(encodedKey, 60), "EXPIRE");
-                System.out.println("TEST: DEL");
-                require(1L, connection.keyCommands().del(encodedKey), "DEL");
             } finally {
                 connection.close();
             }
-            System.out.println("COMPATIBLE: PING, SET, GET, EXPIRE, and DEL succeeded");
+
+            Instant expiration = Instant.now().plusSeconds(3);
+            System.out.println("TEST: REPOSITORY SAVE");
+            repository.save(new JwtBlacklist(jwt, expiration));
+
+            System.out.println("TEST: REPOSITORY FIND AND DESERIALIZE");
+            JwtBlacklist stored = repository.findById(jwt)
+                .orElseThrow(() -> new IllegalStateException("saved JwtBlacklist was not found"));
+            require(jwt, stored.getJwt(), "repository JWT round trip");
+            require(expiration, stored.getExpiration(), "repository Instant round trip");
+
+            System.out.println("TEST: TTL EXPIRY");
+            Thread.sleep(4000);
+            require(false, repository.findById(jwt).isPresent(), "repository TTL expiry");
+
+            System.out.println("TEST: REPOSITORY DELETE");
+            repository.save(new JwtBlacklist(jwt, Instant.now().plusSeconds(60)));
+            repository.deleteById(jwt);
+            require(false, repository.findById(jwt).isPresent(), "repository delete");
+
+            System.out.println("COMPATIBLE: gateway-equivalent PING, repository mapping, TTL, and delete succeeded");
         } catch (Exception exception) {
             System.err.println("INCOMPATIBLE: " + rootCause(exception).getClass().getSimpleName()
                 + ": " + rootCause(exception).getMessage());
             exception.printStackTrace(System.err);
             exitCode = 1;
-        } finally {
-            factory.destroy();
         }
 
         if (keepAlive) {
@@ -84,14 +64,6 @@ public final class ValkeyCompatibilityTest {
             }
         }
         System.exit(exitCode);
-    }
-
-    private static String required(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(name + " is required");
-        }
-        return value;
     }
 
     private static void require(Object expected, Object actual, String operation) {
